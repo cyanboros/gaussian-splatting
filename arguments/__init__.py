@@ -14,16 +14,18 @@ import sys
 import os
 
 class GroupParams:
-    pass
+    pass    # 占位
 
 class ParamGroup:
     def __init__(self, parser: ArgumentParser, name : str, fill_none = False):
-        group = parser.add_argument_group(name)
+        group = parser.add_argument_group(name) # 参数组，仅是方便分类显示，仍然是一个 ArgumentParser 对象的一部分
         for key, value in vars(self).items():
+        # vars(self) 返回对象 self 的属性字典，然后使用 items() 方法将字典转换为可迭代的键-值对
+        # 用于在不知道对象 self 有哪些属性的情况下，动态地访问这些属性
             shorthand = False
             if key.startswith("_"):
                 shorthand = True
-                key = key[1:]
+                key = key[1:]   # 将一个字符串 key 的第一个字符（即 '_'）去掉，并将结果重新赋值给 key
             t = type(value)
             value = value if not fill_none else None 
             if shorthand:
@@ -39,14 +41,14 @@ class ParamGroup:
 
     def extract(self, args):
         group = GroupParams()
-        for arg in vars(args).items():
+        for arg in vars(args).items():  # args 键值对
             if arg[0] in vars(self) or ("_" + arg[0]) in vars(self):
-                setattr(group, arg[0], arg[1])
+                setattr(group, arg[0], arg[1])  # 这个函数用于设置对象的属性值，第一个参数是要设置属性的对象，第二个参数是要设置的属性名称，第三个参数是要设置的属性值。
         return group
 
-class ModelParams(ParamGroup): 
-    def __init__(self, parser, sentinel=False):
-        self.sh_degree = 3
+class ModelParams(ParamGroup):
+    def __init__(self, parser, sentinel=False): # 先执行子类 __init__，再执行父类 __init__
+        self.sh_degree = 3  # 球谐函阶数
         self._source_path = ""
         self._model_path = ""
         self._images = "images"
@@ -54,7 +56,7 @@ class ModelParams(ParamGroup):
         self._white_background = False
         self.data_device = "cuda"
         self.eval = False
-        super().__init__(parser, "Loading Parameters", sentinel)
+        super().__init__(parser, "Loading Parameters", sentinel)    # 子类有 __init__，必须显示调用父类 __init__
 
     def extract(self, args):
         g = super().extract(args)

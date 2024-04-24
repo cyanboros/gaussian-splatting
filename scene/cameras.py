@@ -19,6 +19,11 @@ class Camera(nn.Module):
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda"
                  ):
+        """
+        colmap_id: 相机的标识符、R: 旋转矩阵、T: 平移向量、FoVx: 水平视场角、FoVy: 垂直视场角、image: 图像、gt_alpha_mask: 真实 alpha 掩码、image_name: 图像名称、uid: 用户标识符。
+        trans 和 scale 是用于平移和缩放的附加参数，
+        """
+
         super(Camera, self).__init__()
 
         self.uid = uid

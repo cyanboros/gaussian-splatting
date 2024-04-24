@@ -13,6 +13,14 @@ import torch
 import numpy as np
 from utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
 from torch import nn
+"""
+torch.nn 是 PyTorch 中用于构建神经网络的模块。
+它提供了一系列类和函数，用于构建各种类型的神经网络模型。
+torch.nn 模块的核心是 Module 类，所有的神经网络模型都应该继承自这个类。
+
+torch.nn 中包含了许多预定义的层（如线性层、卷积层、循环神经网络等）、激活函数（如ReLU、Sigmoid、Tanh等）、损失函数（如交叉熵损失、均方误差损失等）以及一些其他的工具函数，这些工具函数都是用来构建和训练神经网络模型的。
+"""
+
 import os
 from utils.system_utils import mkdir_p
 from plyfile import PlyData, PlyElement
@@ -43,8 +51,8 @@ class GaussianModel:
 
     def __init__(self, sh_degree : int):
         self.active_sh_degree = 0
-        self.max_sh_degree = sh_degree  
-        self._xyz = torch.empty(0)
+        self.max_sh_degree = sh_degree  # 球谐函数阶数上限
+        self._xyz = torch.empty(0)  # torch.empty(0) 创建一个未初始化的空张量 torch.Tensor
         self._features_dc = torch.empty(0)
         self._features_rest = torch.empty(0)
         self._scaling = torch.empty(0)
@@ -92,7 +100,7 @@ class GaussianModel:
         self.denom = denom
         self.optimizer.load_state_dict(opt_dict)
 
-    @property
+    @property   # @property 是 Python 中用来将方法转换为属性的装饰器。当你在一个方法上应用 @property 装饰器时，它将允许你像访问属性一样访问这个方法，而不需要在方法调用时加上括号。
     def get_scaling(self):
         return self.scaling_activation(self._scaling)
     
@@ -124,6 +132,12 @@ class GaussianModel:
     def create_from_pcd(self, pcd : BasicPointCloud, spatial_lr_scale : float):
         self.spatial_lr_scale = spatial_lr_scale
         fused_point_cloud = torch.tensor(np.asarray(pcd.points)).float().cuda()
+        """
+        np.asarray(pcd.points)：将点云对象 pcd 的点坐标数据转换为 NumPy 数组。
+        torch.tensor(...)：将 NumPy 数组转换为 PyTorch 张量。
+        .float()：将张量的数据类型转换为 float 类型，以便与 CUDA 设备兼容。
+        .cuda()：将张量移动到 CUDA 设备上进行计算。
+        """
         fused_color = RGB2SH(torch.tensor(np.asarray(pcd.colors)).float().cuda())
         features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()
         features[:, :3, 0 ] = fused_color
@@ -138,8 +152,19 @@ class GaussianModel:
 
         opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
 
-        self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
+        self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))    # train.training scene 实例化时第一次执行，用点云坐标张量初始化 _xyz 张量
+        """
+        nn.Parameter() 是 PyTorch 中用于定义模型参数的类。
+        在 PyTorch 中，模型的可学习参数（例如权重和偏置）通常被包装在 nn.Parameter 类的对象中。
+        这样做的好处是，PyTorch 能够自动地跟踪这些参数的梯度，并在反向传播过程中更新它们的值。
+        .requires_grad_(True)：设置张量的 requires_grad 属性为 True，表示需要计算其梯度。
+        """
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
+        """
+        feature 后代码的作用是对一个张量进行转置操作，并设置其 requires_grad 属性为 True，以便在反向传播过程中计算梯度。具体来说执行步骤如下：
+            tensor.transpose(1, 2)：对张量进行转置操作，将第 1 维和第 2 维交换位置。假设原始张量的形状是 (N, C, H, W)，转置后的形状将变为 (N, H, W, C)。
+            contiguous()：使张量变为连续的内存布局，以便后续操作。
+        """
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
         self._scaling = nn.Parameter(scales.requires_grad_(True))
         self._rotation = nn.Parameter(rots.requires_grad_(True))
@@ -148,8 +173,12 @@ class GaussianModel:
 
     def training_setup(self, training_args):
         self.percent_dense = training_args.percent_dense
-        self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
-        self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+        self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda") 
+        """
+        torch.Tensor.shape 返回该张量各维度大小构成的元组。
+        并通过 device="cuda" 参数将张量放置在 CUDA 设备上。这种操作通常用于在 CUDA 上进行张量运算，利用 GPU 的并行计算能力加速模型训练和推理过程。
+        """
+        self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda") # torch.zeros() 接受一个元组，根据该元组创建一个数值全为 0 的 torch.Tensor
 
         l = [
             {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
@@ -158,20 +187,24 @@ class GaussianModel:
             {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
             {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
             {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
-        ]
+        ]   # 'params': 参数，'lr': 参数学习率，'name': 参数名
 
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
+        """
+        优化器，即优化方式为 Adam，l 为 model.parameter，lr 为学习率（这里初始化为零，无法更新参数），eps 是防止除零的常数
+        torch.optim.Adam() 的构造函数包含 param_groups = l: list[dict] 的赋值操作
+        """
         self.xyz_scheduler_args = get_expon_lr_func(lr_init=training_args.position_lr_init*self.spatial_lr_scale,
                                                     lr_final=training_args.position_lr_final*self.spatial_lr_scale,
                                                     lr_delay_mult=training_args.position_lr_delay_mult,
-                                                    max_steps=training_args.position_lr_max_steps)
+                                                    max_steps=training_args.position_lr_max_steps)  # xyz 调节程序参数，返回一个内部 get_expon_lr_func().helper() 方法
 
     def update_learning_rate(self, iteration):
         ''' Learning rate scheduling per step '''
-        for param_group in self.optimizer.param_groups:
+        for param_group in self.optimizer.param_groups: # optimizer 是在 train.training() 的 gaussians: GaussianModel.training_setup(opt) 处初始化的优化器
             if param_group["name"] == "xyz":
                 lr = self.xyz_scheduler_args(iteration)
-                param_group['lr'] = lr
+                param_group['lr'] = lr  # 被复制的类似 list，dict 的遍历项中，子元素的 “地址” 也被一道复制，故在循环体内部对此类元素赋值更改时，变更直接传递到被遍历变量对应 “地址” 中去
                 return lr
 
     def construct_list_of_attributes(self):

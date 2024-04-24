@@ -104,13 +104,18 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
     sys.stdout.write('\n')
     return cam_infos
 
+# 提取点云数据坐标、颜色、法向量
 def fetchPly(path):
     plydata = PlyData.read(path)
     vertices = plydata['vertex']
     positions = np.vstack([vertices['x'], vertices['y'], vertices['z']]).T
+    """
+    np.vstack() 是 NumPy 库中的一个函数，用于沿着垂直方向（行方向）堆叠数组。
+    具体来说，它将一组数组沿着它们的第一个维度（行）堆叠起来，形成一个新的数组。
+    """
     colors = np.vstack([vertices['red'], vertices['green'], vertices['blue']]).T / 255.0
     normals = np.vstack([vertices['nx'], vertices['ny'], vertices['nz']]).T
-    return BasicPointCloud(points=positions, colors=colors, normals=normals)
+    return BasicPointCloud(points=positions, colors=colors, normals=normals)    # 返回一个包含点云数据中所有点坐标、颜色、法向量的实例
 
 def storePly(path, xyz, rgb):
     # Define the dtype for the structured array
@@ -145,7 +150,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
     cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
     cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
-    if eval:
+    if eval:    # eval: False in default
         train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
         test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
     else:
@@ -165,7 +170,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
             xyz, rgb, _ = read_points3D_text(txt_path)
         storePly(ply_path, xyz, rgb)
     try:
-        pcd = fetchPly(ply_path)
+        pcd = fetchPly(ply_path)    # 提取点云数据有用信息
     except:
         pcd = None
 
@@ -174,6 +179,10 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
                            test_cameras=test_cam_infos,
                            nerf_normalization=nerf_normalization,
                            ply_path=ply_path)
+    """
+    point_cloud: urils.graphics_utils.BasicPointCloud 类
+    train_cameras: 
+    """
     return scene_info
 
 def readCamerasFromTransforms(path, transformsfile, white_background, extension=".png"):

@@ -13,6 +13,18 @@ import torch
 import math
 import numpy as np
 from typing import NamedTuple
+"""
+NamedTuple 允许创建具有命名字段的轻量级对象，类似于具名元组（named tuple），但具有类的属性和方法。
+使用 NamedTuple，可以定义一个具有命名字段的数据结构，而无需显式地编写一个完整的类。这对于创建简单的数据对象非常有用。
+
+class Point(NamedTuple):
+    x: int
+    y: int
+
+# 创建一个 Point 对象
+p = Point(1, 2)
+print(p.x, p.y)  # 输出: 1 2
+"""
 
 class BasicPointCloud(NamedTuple):
     points : np.array

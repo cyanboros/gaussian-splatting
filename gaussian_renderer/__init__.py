@@ -23,7 +23,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     """
  
     # Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
-    screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0
+    screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0    # torch.zeros_like(input) 函数会返回一个与输入张量 input 具有相同形状（shape）和数据类型（dtype）的全零张量。
     try:
         screenspace_points.retain_grad()
     except:
@@ -32,7 +32,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     # Set up rasterization configuration
     tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
     tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
-
+    
     raster_settings = GaussianRasterizationSettings(
         image_height=int(viewpoint_camera.image_height),
         image_width=int(viewpoint_camera.image_width),
@@ -46,9 +46,9 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         campos=viewpoint_camera.camera_center,
         prefiltered=False,
         debug=pipe.debug
-    )
+    )   # 返回一个 diff_gaussian_rasterization.GaussianRasterizationSettings 类，用于给接下来的光栅化传入设置
 
-    rasterizer = GaussianRasterizer(raster_settings=raster_settings)
+    rasterizer = GaussianRasterizer(raster_settings=raster_settings)    # 光栅化
 
     means3D = pc.get_xyz
     means2D = screenspace_points

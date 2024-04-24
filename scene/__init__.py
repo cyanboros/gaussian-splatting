@@ -14,7 +14,7 @@ import random
 import json
 from utils.system_utils import searchForMaxIteration
 from scene.dataset_readers import sceneLoadTypeCallbacks
-from scene.gaussian_model import GaussianModel
+from scene.gaussian_model import GaussianModel  # 类的导入可传递，在包外可直接通过包名 scene 访问 GaussianModel
 from arguments import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
 
@@ -23,7 +23,7 @@ class Scene:
     gaussians : GaussianModel
 
     def __init__(self, args : ModelParams, gaussians : GaussianModel, load_iteration=None, shuffle=True, resolution_scales=[1.0]):
-        """b
+        """
         :param path: Path to colmap scene main folder.
         """
         self.model_path = args.model_path
@@ -41,7 +41,15 @@ class Scene:
         self.test_cameras = {}
 
         if os.path.exists(os.path.join(args.source_path, "sparse")):
-            scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval)
+            """
+            os.path.join(): 是一个路径拼接函数，这里它将 args.source_path 和 "sparse" 这个字符串连接起来，返回一个新的路径字符串。这个操作可以确保在不同操作系统上构建的路径都是正确的。
+            os.path.exists(): 检查指定路径是否存在。它接受一个路径作为参数，返回一个布尔值，表示该路径是否存在。
+            """
+            scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval) # = dataset_readers.readColmapSceneInfo(args.source_path, args.images, args.eval)
+            """
+            args.eval: False in default
+            dataset_readers.readColmapSceneInfo(): 读取 ColmapSceneInfo 返回一个 dataset_readers.ScenceInfo 类
+            """
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")
             scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval)
@@ -68,9 +76,9 @@ class Scene:
 
         self.cameras_extent = scene_info.nerf_normalization["radius"]
 
-        for resolution_scale in resolution_scales:
+        for resolution_scale in resolution_scales:  # 初始化时只有 1.0
             print("Loading Training Cameras")
-            self.train_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.train_cameras, resolution_scale, args)
+            self.train_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.train_cameras, resolution_scale, args) # 返回 list[Camera]
             print("Loading Test Cameras")
             self.test_cameras[resolution_scale] = cameraList_from_camInfos(scene_info.test_cameras, resolution_scale, args)
 
@@ -80,7 +88,10 @@ class Scene:
                                                            "iteration_" + str(self.loaded_iter),
                                                            "point_cloud.ply"))
         else:
-            self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent)
+            self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent) # train.training scene 实例化时第一次执行
+            """
+            scene_info.point_cloud: urils.graphics_utils.BasicPointCloud 类，包含点云各点位置、颜色、法向量信息
+            """
 
     def save(self, iteration):
         point_cloud_path = os.path.join(self.model_path, "point_cloud/iteration_{}".format(iteration))

@@ -51,6 +51,7 @@ def loadCam(args, id, cam_info, resolution_scale):
                   image=gt_image, gt_alpha_mask=loaded_mask,
                   image_name=cam_info.image_name, uid=id, data_device=args.data_device)
 
+# 从 camInofos 中加载相机列表 list[Camera]
 def cameraList_from_camInfos(cam_infos, resolution_scale, args):
     camera_list = []
 
